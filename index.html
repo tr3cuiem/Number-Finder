@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Random Match — Live Loop</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sideCard">
+      <!-- Options first -->
+      <div class="sideTitle" style="margin-bottom: 8px;">
+        <h2>Options</h2>
+        <div class="sideHint">Sidebar</div>
+      </div>
+      <div class="sideHint" style="margin-top: 0; display:flex; align-items:flex-start; gap:10px;">
+        <input type="checkbox" id="resetTopOnStart" style="margin-top: 2px; accent-color: var(--green);" checked>
+        <label for="resetTopOnStart" style="cursor:pointer; line-height: 1.35;">
+          Reset <b>Top 30</b> when pressing <b>Start</b> after <b>Stop</b>.
+          <span style="display:block; margin-top:4px; opacity:.9;">
+            (After a <b>win</b>, Top 30 resets on Start automatically.)
+          </span>
+        </label>
+      </div>
+
+      <div class="sideHint" style="margin-top: 10px; display:flex; align-items:flex-start; gap:10px;">
+        <input type="checkbox" id="pillBoxesPulse" style="margin-top: 2px; accent-color: var(--green);" checked>
+        <label for="pillBoxesPulse" style="cursor:pointer; line-height: 1.35;">
+          Show pill <b>boxes</b> + slow <b>pulse</b> (asynchronous).
+        </label>
+      </div>
+
+      <!-- RGB tone influence -->
+      <div class="sideTitle" style="margin: 14px 0 10px; flex-direction:column; align-items:flex-start;">
+        <h2 style="margin:0;">Number color influence</h2>
+        <div class="sideHint">0% = black • 50% = rainbow base • 100% = white (layered tint)</div>
+      </div>
+
+      <div class="toneGroup">
+        <div class="toneRow">
+          <div class="toneLabel">R</div>
+          <input id="toneR" type="range" min="0" max="100" value="50">
+          <div class="toneVal" id="toneRVal">50%</div>
+        </div>
+        <div class="toneRow">
+          <div class="toneLabel">G</div>
+          <input id="toneG" type="range" min="0" max="100" value="50">
+          <div class="toneVal" id="toneGVal">50%</div>
+        </div>
+        <div class="toneRow" style="margin-bottom: 12px;">
+          <div class="toneLabel">B</div>
+          <input id="toneB" type="range" min="0" max="100" value="50">
+          <div class="toneVal" id="toneBVal">50%</div>
+        </div>
+      </div>
+
+      <!-- Top list (scrollable, 100vh) -->
+      <div class="sideTitle" style="margin-top: 12px;">
+        <h2>Top 30 Near-Misses</h2>
+        <div class="sideHint">Higher count wins • tie → higher value</div>
+      </div>
+
+      <div class="topScroll">
+        <ul class="topList" id="topList"></ul>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="wrap">
+      <div class="panel">
+        <div class="title">
+          <h1>🎲 Random Match — Live Loop</h1>
+          <div class="badge">
+            <span>Rate:</span>
+            <b><span class="dyn-number" id="rateBadge"></span>/s</b>
+            <span style="opacity:.8">•</span>
+            <span>Range: <b><span class="dyn-number" id="rangeBadge"></span></b></span>
+            <span style="opacity:.8">•</span>
+            <span>Pills: <b><span class="dyn-number" id="countBadge"></span></b></span>
+          </div>
+        </div>
+
+        <!-- Setup -->
+        <div class="configCard" id="configCard">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div style="min-width: 220px;">
+              <div style="font-size:14px; font-weight:800;">Game Setup</div>
+              <div style="font-size:12px; color: var(--muted); margin-top: 4px;">
+                Settings persist in cookies for <b>30 days</b>.
+              </div>
+            </div>
+            <div style="font-size:12px; color: var(--muted);">
+              After starting, you can adjust <b>ticks/sec</b> live.
+            </div>
+          </div>
+
+          <div class="configGrid" style="margin-top: 14px;">
+            <div class="field">
+              <div class="label">Pill count</div>
+              <input class="input" id="cfgCount" type="number" min="1" max="50" step="1" value="">
+            </div>
+            <div class="field">
+              <div class="label">Range min</div>
+              <input class="input" id="cfgMin" type="number" step="1" value="">
+            </div>
+            <div class="field">
+              <div class="label">Range max</div>
+              <input class="input" id="cfgMax" type="number" step="1" value="">
+            </div>
+            <div class="field">
+              <div class="label">Ticks / second</div>
+              <input class="input" id="cfgRate" type="number" min="1" max="60" step="1" value="">
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:center; margin-top: 16px;">
+            <button class="btn primary" id="startOnlyBtn">▶ Start</button>
+          </div>
+        </div>
+
+        <!-- Game -->
+        <div class="numbers" id="numbers" style="display:none;"></div>
+
+        <div class="meta" id="meta" style="display:none;">
+          <div>Tries: <span class="strong dyn-number" id="tries">0</span></div>
+          <div>Last response: <span class="strong dyn-number" id="lat">—</span> ms</div>
+          <div>Timer: <span class="strong dyn-number" id="timer">0 Years, 0 Days, 0 Hours, 0 Minutes, 0 Seconds.</span></div>
+        </div>
+
+        <div class="status" id="status" style="display:none;">
+          <span class="dot stopped" id="dot"></span>
+          <span id="statusText">Stopped</span>
+          <span id="bgHint" style="opacity:.85"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer" id="footer" style="display:none;">
+      <button class="btn primary" id="startBtn">▶ Start</button>
+      <button class="btn danger" id="stopBtn" disabled>⏸ Stop</button>
+      <button class="btn secondary" id="resetBtn">↻ Reset</button>
+
+      <div class="configCard" style="padding: 12px 12px;">
+        <div style="display:flex; align-items:center; gap: 10px; flex-wrap:wrap;">
+          <div style="color: var(--muted); font-size: 12px;">Ticks/sec</div>
+          <input class="input" id="rateInput" type="number" min="1" max="60" step="1"
+                 value=""
+                 style="width: 120px; padding: 12px 12px;">
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="confetti" id="confetti"></div>
+  <div class="toast" id="toast">
+    <span class="pillDot"></span>
+    <span id="toastText">Perfect match! Paused.</span>
+  </div>
+
+<script src="app.js"></script>
+</body>
+</html>
